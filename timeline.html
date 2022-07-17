@@ -1,0 +1,155 @@
+{% extends "root.html" %}
+
+{% block title %}Feature Comparison{% endblock %}
+{% block banner_link %}{{ url_for('static', filename='images/graph-banner.png') }}{% endblock %}
+
+{% block main %}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.js"></script>
+<style>
+  form > * { float: left; margin: 10px }
+  .checkbox-menu { top: inherit; left: auto; max-height: 500px; overflow-y: scroll; }
+  .checkbox-menu li label {
+      display: block;
+      padding: 3px 10px;
+      clear: both;
+      font-weight: normal;
+      line-height: 1.42857143;
+      color: #333;
+      white-space: nowrap;
+      margin:0;
+  }
+  .checkbox-menu li input { margin: 0px 5px; top: 2px; position: relative; }
+  .checkbox-menu li.active label { background-color: #cbcbff; font-weight:bold; }
+  .checkbox-menu li label:hover,
+  .checkbox-menu li label:focus { background-color: #f5f5f5; }
+  .checkbox-menu li.active label:hover,
+  .checkbox-menu li.active label:focus { background-color: #b8b8ff; }
+
+  #SR { pointer-events: none; width: 600px; float: left; overflow: hidden }
+  #legend { display: flex; align-content: center; justify-content: center; }
+  #legend span { margin-right: 10px; align-self: center; }
+  .legend-dot { display: inline-block; height: 12px; width: 12px; border-radius: 50%; margin: 0 5px; }
+
+  #dash { padding: 25px 0; }
+</style>
+
+<!-- this script controls the behavior of the regions dropdown menu -->
+<script defer>
+  // keeps the dropdown menu open after the user clicks an item
+  $(document).on('click', '.allow-focus', function (e) { e.stopPropagation(); });
+
+  var quickDeath = JSON.parse(`{{ death|safe }}`);
+
+  // called each time a list item is clicked
+  const countRegions = () => {
+    let chkd = $('input.region:checked');
+
+    if (chkd.length > 0) {
+      $('#submit').prop('disabled', false);
+      $('#SR').text(chkd.toArray().map(e => e.id).join(', '));
+      $('#SR').show(200);
+    } else {
+      $('#submit').prop('disabled', true);
+      $('#SR').hide(200);
+    }
+
+    if (chkd.length == 5) 
+      $('input.region:not(:checked)').prop('disabled', true);
+    else 
+      $('input.region:not(:checked)').prop('disabled', false);
+  }
+</script>
+
+<div class="bg-secondary" style='padding: 20px'>
+  <form class="container-fluid" action="/timeline/results/{{ locale }}" method="POST" novalidate>
+
+    <button class="card btn btn-light dropdown-toggle m-2" type="button" style='float:left' 
+      id="regionDropDown" data-toggle="dropdown" aria-haspopup="true" aria-expanded="true"> Select regions...  </button>
+    <ul class="dropdown-menu checkbox-menu allow-focus" aria-labelledby="regionDropDown">
+      {% for r in regions %}
+      <li><label><input class='region' id="{{ r }}" name="{{ r }}" type="checkbox" value="{{ r }}" onchange="countRegions()">{{ r }}</label></li>
+      {% endfor %}
+    </ul>
+    
+    <select id="feature1" class="card btn btn-light m-2" name="feature1">
+      {% for f in features %} <option id='{{ f }}' value='{{ f }}'>{{ features[f] }}</option> {% endfor %}
+    </select>
+
+    <select id="feature2" class="card btn btn-light m-2" name="feature2">
+      {% for f in features %} <option id='{{ f }}' value='{{ f }}'>{{ features[f] }}</option> {% endfor %}
+    </select>
+    
+    <input id="submit" class="btn btn-light m-2" type="submit" value="Submit" disabled>
+    <label id='SR' class='btn btn-light m-2' style='margin: auto; display:none'></label>
+    
+  </form>
+</div>
+
+{% if data %} <!-- if the page is being loaded with graph data, generate graphs -->
+
+<div id='dash'></div>
+
+<script src="{{ url_for('static', filename='timelineFunctions.js') }}"></script>
+
+<!-- this script unpacks data from the server, builds the Graph object, and graphs the data -->
+<script type='text/javascript'>
+
+  var colors = ['rgb(31, 119, 180)', 'rgb(255, 127, 14)', 'rgb(148, 103, 189)', 'rgb(140, 86, 75)', 'rgb(188, 189, 34)']
+
+  var data = JSON.parse('{{ data|safe }}');
+  var db;
+ 
+  // this assumes that all datasets cover the same time range (they will all be plotted
+  // left-aligned with the horizontally 'widest' dataset)
+  let xlbl = new Set();
+  for (let r in data) 
+    for (let day of data[r].t) xlbl.add(day.slice(0,7));
+  xlbl = Array(... xlbl).sort()
+    .map(m => `${monthNames[parseInt(m.slice(5))-1]} ${m.slice(0,4)}`);
+
+  // add two datasets to the dashboard per region - for features 1 & 2
+  let legend = [], datasets = [];
+  for (let r in data) {
+    let xvals = [], tvals = [], c = colors.pop();
+
+    // factor of 10 helps space out data (i.e. 10px wide per data point)
+    for (let i = 0; i < data[r].t.length; i++) {
+      xvals.push(10 * i);
+      tvals.push(data[r].t[i]);
+    }
+
+    // exclude string feature names from datasets
+    datasets.push(DataSet( xvals, data[r]['f1'], tvals, 1, r, c ))
+    datasets.push(DataSet( xvals, data[r]['f2'], tvals, 2, r, c ))
+
+    legend.push([r, c]);
+  }
+  
+  function makeGraph() {
+
+    db = new Dash('dash', 
+      $('#main-content').width(), 
+      $(window).height() * 0.6, 
+      `{{ feature1 }}`, 
+      `{{ feature2 }}`
+    );
+
+    for (let ds of datasets) db.push(ds);
+
+    db.xlbl = xlbl;
+    db.legend(legend);
+    db.scroll(0);
+
+  }
+
+  makeGraph();
+
+  $(window).on('resize', () => { $('#dash').empty(); makeGraph(); });
+
+</script>
+
+{% endif %}
+{% endblock %}

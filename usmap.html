@@ -1,0 +1,127 @@
+{% extends "root.html" %}
+
+{% block title %}Map Visualization{% endblock %}
+{% block banner_link %}{{ url_for('static', filename='images/usmap-banner.png') }}{% endblock %}
+
+{% block main %}
+<script defer src='{{ url_for("static", filename="mapFunctions.js") }}'></script>
+
+<div class="float-left" style="width: 18.5%">
+  <div class="border bg-secondary border-dark container-fluid" style="width: 100%; height: 100%;">
+    <div class="container-fluid">
+
+      {% if not ipt %}
+      <form action = "/usmap" method = "POST" novalidate>
+        
+        <select style="background-color:#BECFEB;" data-toggle="tooltip" data-placement="top" data_html = "true" title="Select the length (in number of days) for the periods to be analyzed" class=" m-2 btn btn-light" id="periodLength" name="periodLength" size="1" onchange="toBorderDark(id); adjust_min_of_2nd_period(); enable_1st_calendar(); enable_2nd_calendar(); enableSubmit(); set_max_date(); resetDates(id);">
+
+            {% for i in intervals %}
+              {% if i == 0 %} <option value="{{i}}" selected disabled>Select an Interval</option>
+              {% else %}      <option value="{{i}}">{{i}} Days</option> {% endif %}
+            {% endfor %}
+
+        </select>
+        
+        <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip" data-placement="top" title="Select the period whose number of new cases form the basis of comparison">
+            <h6 class="card-title text-center">Base Period</h6>
+            <input style="background-color:#BECFEB;" class="  m-2 btn btn-light" type="date" id="start_of_startDate" min="2020-02-01" name="start_of_startDate" onchange="toBorderDark(id); enableSubmit(); adjust_min_of_2nd_period(); enable_2nd_calendar(); setEnd(id); resetDates(id);" disabled>
+            
+            <label style="background-color:#4273C5; pointer-events: none" id="end_of_startDate" class="btn m-2 btn-dark">-</label>
+        </div>
+        
+        <div class="m-1 text-light font-weight-bold">V/S</div>
+        
+        <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip" data-placement="top" title="Select the period whose number of new cases are to be compared against the Base Period">
+            <h6 class="card-title text-center">Target Period</h6>
+            <input style="background-color:#BECFEB;" class="m-2  btn btn-light" type="date" id="start_of_endDate" name="start_of_endDate" min="2020-02-01" onchange="toBorderDark(id); enableSubmit(); setEnd(id);" disabled>
+
+            <label style="background-color:#4273C5; pointer-events: none" id="end_of_endDate" class="m-2  btn btn-dark">-</label>
+        </div>
+
+        <select style="background-color:#BECFEB;" data-toggle="tooltip" data-placement="top" title="Select the extent of change that needs to be analyzed" class=" m-2 btn btn-light" id="interval" name="interval" size="1" onchange="toBorderDark(id); enableSubmit();">
+
+            {% for i in rates.keys() %}
+            {% if i == 0 %}
+            <option value="{{i}}" selected disabled>Severity Rate</option>
+            {% else %}
+            <option value="{{i}}">{{rates[i]}}</option>
+            {% endif %}
+            {% endfor %}
+
+        </select>
+        <br/>
+        <input id="submit" class=" btn btn-danger m-2" type="submit" value ="Submit" onclick="loadingScreen(iframe);" disabled>
+        {% if message %}
+        <label class="text-danger form-check-label">* {{message}}</label>
+        {% endif %}
+      </form>
+
+      {% else %}
+      
+      <form action = "/usmap" method = "POST" novalidate>
+          
+          <select style="background-color:#BECFEB;" data-toggle="tooltip"data-placement="top" title="Select the length (in number of days) for the periods to be analyzed" class=" m-2  btn btn-light {% if check['period'] == 0 %} border-danger {% endif %}" id="periodLength" name="periodLength" size="1" onchange="toBorderDark(id); resetDates(id); adjust_min_of_2nd_period(); enable_2nd_calendar(); enableSubmit(); enable_1st_calendar(); set_max_date(); setEnd(id);">
+
+              
+              {% for i in intervals %}
+              
+              {% if i == 0 %}
+              <option value="{{i}}" disabled>Select an Interval</option>
+              {% elif i|int == ipt['periodLength']|int %}
+              <option value="{{i}}" selected>{{i}} Days</option>
+              {% else %}
+              <option value="{{i}}">{{i}} Days</option>
+              {% endif %}
+              {% endfor %}
+
+          </select>
+          
+          <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip"data-placement="top" title="Select the period whose number of new cases form the basis of comparison">
+              <h6 class="card-title text-center">Base Period</h6>
+              <input style="background-color:#BECFEB;" class=" m-2 btn btn-light   {% if check['startDate'] == 0 %} border-danger {% endif %}" type="date" id="start_of_startDate" min="2020-02-01" name="start_of_startDate" value="{{ipt['start_of_startDate']}}" onchange="toBorderDark(id); adjust_min_of_2nd_period(); enable_2nd_calendar(); setEnd(id); resetDates(id); enableSubmit();">
+              
+              <label style="background-color:#4273C5;" id="end_of_startDate" class="m-2  btn btn-dark">{{start}}</label>
+          </div>
+          <div class="m-1 text-light font-weight-bold">V/S</div>
+          <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip"data-placement="top" title="Select the period whose number of new cases are to be compared against the Base Period">
+              <h6 class="card-title text-center">Target Period</h6>
+              <input style="background-color:#BECFEB;" class=" m-2  btn btn-light {% if check['endDate'] == 0 %} border-danger {% endif %}" type="date" id="start_of_endDate" name="start_of_endDate" min="2020-02-01" value="{{ipt['start_of_endDate']}}" onchange="toBorderDark(id); enableSubmit(); setEnd(id); resetDates(id);" disabled>
+              
+              <label style="background-color:#4273C5;" id="end_of_endDate" class="m-2 btn btn-dark">{{end}}</label>
+          </div>
+
+          <select style="background-color:#BECFEB;" data-toggle="tooltip" data-placement="top" title="Select the extent of change that needs to be analyzed" class=" m-2  btn btn-light {% if check['interval'] == 0 %} border-danger {% endif %}" id="interval" name="interval" size="1" onchange="toBorderDark(id); enableSubmit();">
+
+              {% for i in rates.keys() %}
+              {% if i == 0 %}
+              <option value="{{i}}" disabled>Severity Rate</option>
+              {% elif i|int == ipt['interval']|int %}
+              <option value="{{i}}" selected>{{rates[i]}}</option>
+              {% else %}
+              <option value="{{i}}">{{rates[i]}}</option>
+              {% endif %}
+              {% endfor %}
+
+          </select>
+          <br/>
+          <input id="submit" class=" m-2  btn btn-dark m-2" type="submit" onclick="loadingScreen(iframe);" value ="Submit">
+          {% if message %}
+          <label class="text-danger form-check-label">* {{message}}</label>
+          {% endif %}
+      </form>
+      {% endif %}
+    </div> 
+  </div>
+</div>
+
+{% if filepath %}
+<div  class="embed-responsive embed-responsive-21by9 text-center m-1 " style="width: 81.5%; position: relative;">
+    <iframe id="iframe" src="{{ url_for('static', filename=filepath) }}" width="100%;" class="embed-responsive-item" allowfullscreen></iframe>
+</div>
+{% else %}
+<div class="embed-responsive embed-responsive-21by9 text-center m-1" style="width: 81.5%; height:inherit; position: relative;">
+    <iframe id="iframe" src="{{ url_for('static', filename='default.html') }}" width="100%;" class="embed-responsive-item" allowfullscreen></iframe>
+</div>
+{% endif %}
+
+{% endblock %}

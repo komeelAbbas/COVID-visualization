@@ -1,0 +1,138 @@
+<!DOCTYPE html>
+<html style='overflow: hidden'>
+  <head>
+    <title> {% block title %}{% endblock %} | ITLab </title>
+
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
+    <meta name="description" content="COVID-19 Data Analysis and Visualization using Multilayer Networks at the Information Technology Lab in the Department of Computer Science and Engineering at The University of Texas at Arlington">
+    <meta name="author" content="Information Technology Laboratory (ITLab) at UT Arlington">
+    <meta name="generator" content="Jekyll v4.1.1">
+
+    <link rel="icon" href="{{ url_for('static', filename='images/favicon.ico') }}" sizes="16x16" type="image/png">
+    
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/css/bootstrap.min.css" rel="stylesheet" integrity="sha384-BmbxuPwQa2lc/FVzBcNJ7UAyJxM6wuqIj61tLrc4wSX0szH/Ev+nYRRuWlolflfl" crossorigin="anonymous">
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.0.0-beta2/dist/js/bootstrap.bundle.min.js" integrity="sha384-b5kHyXgcpbZJO/tY9Ul7kGkf1S0CWuKcCD38l8YkeH8z8QjE0GmW1gYU5S9FOnJ0" crossorigin="anonymous"></script>
+
+    <link rel="stylesheet" href="https://stackpath.bootstrapcdn.com/bootstrap/4.5.2/css/bootstrap.min.css" integrity="sha384-JcKb8q3iqJ61gNV9KGb8thSsNjpSL0n8PARn9HuZOnIxN0hoP+VmmDGMN5t9UJ0Z" crossorigin="anonymous">
+    <script src="https://code.jquery.com/jquery-3.6.0.js" integrity="sha256-H+K7U5CnXl1h5ywQfKtSj8PCmoN9aaq30gDh27Xc0jk=" crossorigin="anonymous"></script>
+  </head>
+
+  <body class="text-center">
+    <header class="bg-white" style="margin-top: 5px; margin-bottom: 5px;">
+      <a href="https://www.uta.edu" target="_blank"><img id="uta_logo" src="{{url_for('static', filename='images/uta-logo.png')}}" class="rounded float-left" style="margin-left: 15px;"></a>
+      <a href="https://itlab.uta.edu/" target="_blank"><img id="itlab_logo" src="{{url_for('static', filename='images/itlab-logo.png')}}" class="rounded float-right" style="margin-right: 15px;"></a>
+      <a href="/"><img id="center" src="{% block banner_link %}{% endblock %}" class="rounded mx-auto d-block img-height-auto"></a>
+    </header>
+
+{% if who %}
+<!-- Cumulative WHO update: cases/deaths stats from major regions -->
+    <div style="width:95%; margin: 10px auto; display: grid; grid-template: 30px / 300px 1fr; align-items: center; border: 1px solid black; font-size: 18px;">
+
+      <div style='grid-column: 1; background-color: #008DC9; align-self: stretch; display: flex; align-items: center;'>
+        <p style="margin: auto; color: white;">Cumulative <b>WHO</b> Update</p>
+      </div>
+
+      <div style="grid-column: 2; align-self: center">
+        <marquee scrollamount='3' scrolldelay='5'>
+          {% for R in who %} 
+          <span style='padding: 0 10px; font-weight: bold'>{{ R['region'] }}: 
+            <span style='color: orange'>{{ R['cases'] }} Cases</span> | 
+            <span style='color: red'>{{ R['deaths'] }} Deaths</span>
+            <img height=20 src='{{ url_for("static", filename="images/virus.png") }}'>
+          </span> 
+          {% endfor %} </marquee>
+      </div>
+    </div>
+{% endif %}
+
+{% if news %}
+<!-- NYT update: recent article list -->
+    <div style="width:95%; margin: 10px auto; display: grid; grid-template: 100px / 300px 1fr; align-items: center; border: 1px solid black; font-size: 18px;">
+
+      <div style='grid-column: 1; background-color: #008DC9; align-self: stretch; display: flex; align-items: center;'>
+        <p style="margin: auto; color: white;"><b>New York Times</b>Covid Update</p>
+      </div>
+
+      <div style="grid-column: 2; align-self: center; text-align: left; height: 100px; overflow-y: scroll">
+        <ul> {% for page in news %} 
+          <li> {{ page['date'] }}: <a href="{{ page['link'] }}">{{ page['headline'] }}</a></li>
+         {% endfor %} </ul>
+      </div>
+    </div>
+{% endif %}
+
+  <div id='main-content' style="width: 100%">{% block main %}{% endblock %}</div> 
+
+<!-- footer contains links to data/funding sources and developer sites -->
+  <style> 
+    #data-sources {
+      margin: 10px 0;
+      padding: 0 10px;
+      height: 30px;
+    }
+    #data-sources img { 
+      display: inline; 
+      float: left; 
+      padding: 0 10px; 
+    }
+    #foot {
+      width: 100%;
+      position: absolute;
+      bottom: 0;
+    }
+    #link-container { 
+      background: #001f60; 
+      height: 30px;
+    }
+    #links a { 
+      font-size: 12px;
+      text-decoration: none; 
+      color: white; 
+      padding: 0 5px; 
+      float: left;
+      border-right: 1px solid white;
+    } 
+    .descriptor {
+      width: min-content;
+      float: left;
+      padding: 0 5px;
+      border: 1px solid black;
+      background: grey;
+      color: white;
+      height: inherit;
+    }
+    </style>
+    <div id='foot'>
+      <div id='data-sources'>
+        <div class="descriptor"> <p style="margin:auto">Data&nbsp;Sources</p> </div>
+        <a href="https://www.bts.gov/" target="_blank"><img src="{{ url_for('static', filename='images/sources/bts.png') }}" height="30px"></a>
+        <a href="https://www.cdc.gov/" target="_blank"><img src="{{ url_for('static', filename='images/sources/cdc.png') }}" height="30px"></a>
+        <a href="https://datasetsearch.research.google.com/" target="_blank"><img src="{{ url_for('static', filename='images/sources/google.png') }}" height="30px"></a>
+        <a href="https://ourworldindata.org/" target="_blank"><img src="{{ url_for('static', filename='images/sources/owid.png') }}" height="30px"></a>
+        <a href="https://github.com/michadenheijer/pynytimes" target="_blank"><img src="{{ url_for('static', filename='images/sources/nyt.png') }}" height="30px"></a>
+
+        <div class="descriptor" style='margin-left: 25px;'> <p>Funding&nbsp;Sources</p> </div>
+        <a href="https://www.nsf.gov/awardsearch/showAward?AWD_ID=1955798&HistoricalAwards=false" target="_blank"><img src="{{ url_for('static', filename='images/nsf-logo.png') }}" height="30px"></a>
+        
+        <div  style="float: right"> <button type="button" class="btn btn-info" onclick="window.open('mailto:itlab.cse.uta@gmail.com')">Feedback</button> </div>
+
+                
+	</div>
+
+      <div id='link-container'>
+        <p id='links'>
+          <a href="https://www.linkedin.com/in/abhishek-santra/" target="_blank">Abhishek Santra</a> 
+          <a href="https://linkedin.com/in/kunalsamant" target="_blank">Kunal Samant</a> 
+          <a href="https://www.linkedin.com/in/enamul17/" target="_blank">Enamul Karim</a> 
+          <a href="https://www.linkedin.com/in/endrit-m/" target="_blank">Endrit Memeti</a>
+          <a href="http://itlab.uta.edu/index.html" target="_blank">Sharma Chakravarthy</a> 
+          <a href="https://github.com/JacobFV" target="_blank">Jacob Valdez</a> 
+          <a href="https://github.com/banditsbeware" target='_blank'>David Rademacher</a> 
+          <a href="mailto:itlab.cse.uta@gmail.com" target="_blank"><img src="{{url_for('static', filename='images/email.png')}}" height=13px></a></p>
+        <p style="display: inline; color: white; float: right">&copy; 2022 The University of Texas at Arlington </p>
+      </div>
+    </div>
+  </body>
+</html>

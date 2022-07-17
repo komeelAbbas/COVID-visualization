@@ -1,0 +1,194 @@
+{% extends "root.html" %}
+
+{% block title %}Map Visualization{% endblock %}
+{% block banner_link %}{{ url_for('static', filename='images/usmap-banner.png') }}{% endblock %}
+
+{% block main %}
+
+<link href="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/css/bootstrap.css" rel="stylesheet"/>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jquery/3.3.1/jquery.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/3.3.7/js/bootstrap.js"></script>
+<script defer src='{{ url_for("static", filename="map2Functions.js") }}'></script>
+<style>
+    form > * { float: left; margin: 10px }
+    .checkbox-menu { top: inherit; left: auto; max-height: 500px; overflow-y: scroll; }
+    .checkbox-menu li label {
+        display: block;
+        padding: 3px 10px;
+        clear: both;
+        font-weight: normal;
+        line-height: 1.42857143;
+        color: #333;
+        white-space: nowrap;
+        margin:0;
+    }
+    .checkbox-menu li input { margin: 0px 5px; top: 2px; position: relative; }
+    .checkbox-menu li.active label { background-color: #cbcbff; font-weight:bold; }
+    .checkbox-menu li label:hover,
+    .checkbox-menu li label:focus { background-color: #f5f5f5; }
+    .checkbox-menu li.active label:hover,
+    .checkbox-menu li.active label:focus { background-color: #b8b8ff; }
+  
+    #SR { pointer-events: none; width: 600px; float: left; overflow: hidden }
+    #legend { display: flex; align-content: center; justify-content: center; }
+    #legend span { margin-right: 10px; align-self: center; }
+    .legend-dot { display: inline-block; height: 12px; width: 12px; border-radius: 50%; margin: 0 5px; }
+  
+    #dash { padding: 25px 0; }
+  </style>
+
+
+<!-- this script controls the behavior of the regions dropdown menu -->
+<script defer>
+    // keeps the dropdown menu open after the user clicks an item
+    $(document).on('click', '.allow-focus', function (e) { e.stopPropagation(); });
+  
+    var quickDeath = JSON.parse(`{{ death|safe }}`);
+  
+    // called each time a list item is clicked
+    const countRegions = () => {
+      let chkd = $('input.region:checked');
+  
+      if (chkd.length > 0) {
+        $('#submit').prop('disabled', false);
+        $('#SR').text(chkd.toArray().map(e => e.id).join(', '));
+        $('#SR').show(200);
+      } else {
+        $('#submit').prop('disabled', false);
+        $('#SR').hide(200);
+      }
+  
+      if (chkd.length == 5) 
+        $('input.region:not(:checked)').prop('disabled', true);
+      else 
+        $('input.region:not(:checked)').prop('disabled', false);
+    }
+  </script>
+  
+  <div class="bg-secondary" style='padding: 20px'>
+    <div class="border bg-secondary border-dark container-fluid" style="width: 100%; height: 100%;">
+    <div class="container-fluid">
+
+      {% if not ipt %}
+      <form class="container-fluid" action="/usmap2" method = "POST" novalidate>
+           
+        
+  
+
+  <select style="background-color:#BECFEB;" data-toggle="tooltip" data-placement="top" title="Select the region" class=" m-2 btn btn-light" id="regions" name="region" size="1" onchange="toBorderDark(id); enableSubmit();">
+
+    {% for i in regions.keys() %}
+    {% if i == 0 %}
+    <option value="{{i}}" selected disabled>regions</option>
+    {% else %}
+    <option value="{{i}}">{{regions[i]}}</option>
+    {% endif %}
+    {% endfor %}
+
+</select>
+       
+
+        
+        <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip" data-placement="top" title="Select the as whose number of new cases form the basis of comparison">
+            <h6 class="card-title text-center">Base Period</h6>
+            <input style="background-color:#BECFEB;" class="  m-2 btn btn-light" id="start_of_startDate" min="2020-02-01" name="start_of_startDate" type="date"  onchange="toBorderDark(id); enableSubmit(); adjust_min_of_2nd_period(); setEnd(id); resetDates(id);">
+            
+            <!-- <label style="background-color:#4273C5; pointer-events: none" id="end_of_startDate" class="btn m-2 btn-dark">-</label> -->
+        </div>
+        
+        <div class="m-1 text-light font-weight-bold">V/S</div>
+        
+        <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip" data-placement="top" title="Select the period whose number of new cases are to be compared against the Base Period">
+            <h6 class="card-title text-center">Target Period</h6>
+            <input style="background-color:#BECFEB;" class="m-2  btn btn-light" type="date" id="start_of_endDate" name="start_of_endDate" min="2020-02-01" onchange="toBorderDark(id); enableSubmit(); setEnd(id);">
+
+            <!-- <label style="background-color:#4273C5; pointer-events: none" id="end_of_endDate" class="m-2  btn btn-dark">-</label> -->
+        </div>
+
+        <select style="background-color:#BECFEB;" data-toggle="tooltip" data-placement="top" title="Select the feature" class=" m-2 btn btn-light" id="feature" name="feature" size="1" onchange="toBorderDark(id); enableSubmit();">
+
+            {% for i in rates.keys() %}
+            {% if i == 0 %}
+            <option value="{{i}}" selected disabled>Feature</option>
+            {% else %}
+            <option value="{{i}}">{{rates[i]}}</option>
+            {% endif %}
+            {% endfor %}
+
+        </select>
+        <br/>
+        <input id="submit" class=" btn btn-danger m-2" type="submit" value ="Submit" onclick="loadingScreen(iframe);" enabled>
+        {% if message %}
+        <label class="text-danger form-check-label">* {{message}}</label>
+        {% endif %}
+      </form>
+
+      {% else %}
+      
+      <form action = "/usmap2" method = "POST" novalidate>
+          
+          <select style="background-color:#BECFEB;" data-toggle="tooltip"data-placement="top" title="Select the region to be analyzed" class=" m-2  btn btn-light {% if check['region'] == 0 %} border-danger {% endif %}" id="regions" name="regions" size="1" onchange="toBorderDark(id); resetDates(id); adjust_min_of_2nd_period(); enable_2nd_calendar(); enableSubmit();  set_max_date(); setEnd(id);">
+
+              
+              {% for i in regions.keys() %}
+              
+              {% if i == 0 %}
+              <option value="{{i}}" selected disabled>Select a region</option>
+              {% elif i|int == ipt['regions']|int %}
+              <option value="{{i}}" selected>{{regions[i]}} </option>
+              {% else %}
+              <option value="{{i}}">{{regions[i]}}</option>
+              {% endif %}
+              {% endfor %}
+
+          </select>
+          
+          <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip"data-placement="top" title="Select the period whose number of new cases form the basis of comparison">
+              <h6 class="card-title text-center">Base Period</h6>
+              <input style="background-color:#BECFEB;" class=" m-2 btn btn-light   {% if check['startDate'] == 0 %} border-danger {% endif %}" type="date" id="start_of_startDate" min="2020-02-01" name="start_of_startDate" value="{{ipt['start_of_startDate']}}" onchange="toBorderDark(id); adjust_min_of_2nd_period(); enable_2nd_calendar(); setEnd(id); resetDates(id); enableSubmit();">
+              
+              <label style="background-color:#4273C5;" id="end_of_startDate" class="m-2  btn btn-dark">{{start}}</label>
+          </div>
+          <div class="m-1 text-light font-weight-bold">V/S</div>
+          <div style="background-color:#FFF2CC;" class="card p-1" data-toggle="tooltip"data-placement="top" title="Select the period whose number of new cases are to be compared against the Base Period">
+              <h6 class="card-title text-center">Target Period</h6>
+              <input style="background-color:#BECFEB;" class=" m-2  btn btn-light {% if check['endDate'] == 0 %} border-danger {% endif %}" type="date" id="start_of_endDate" name="start_of_endDate" min="2020-02-01" value="{{ipt['start_of_endDate']}}" onchange="toBorderDark(id); enableSubmit(); setEnd(id); resetDates(id);" enabled>
+              
+              <label style="background-color:#4273C5;" id="end_of_endDate" class="m-2 btn btn-dark">{{end}}</label>
+          </div>
+
+          <select style="background-color:#BECFEB;" data-toggle="tooltip" data-placement="top" title="Select the feature" class=" m-2  btn btn-light {% if check['feature'] == 0 %} border-danger {% endif %}" id="feature" name="feature" size="1" onchange="toBorderDark(id); enableSubmit();">
+
+              {% for i in rates.keys() %}
+              {% if i == 0 %}
+              <option value="{{i}}" >Feature</option>
+              {% elif i|int == ipt['feature']|int %}
+              <option value="{{i}}" selected>{{rates[i]}}</option>
+              {% else %}
+              <option value="{{i}}">{{rates[i]}}</option>
+              {% endif %}
+              {% endfor %}
+
+          </select>
+          <br/>
+          <input id="submit" class=" m-2  btn btn-dark m-2" type="submit" onclick="loadingScreen(iframe);" value ="Submit">
+          {% if message %}
+          <label class="text-danger form-check-label">* {{message}}</label>
+          {% endif %}
+      </form>
+      {% endif %}
+    </div> 
+  </div>
+</div>
+
+{% if filepath %}
+<div  class="embed-responsive embed-responsive-21by9 text-center m-1 " style="width: 81.5%; position: relative;">
+    <iframe id="iframe" src="{{ url_for('static', filename=filepath) }}" width="100%;" class="embed-responsive-item" allowfullscreen></iframe>
+</div>
+{% else %}
+<div class="embed-responsive embed-responsive-21by9 text-center m-1" style="width: 81.5%; height:inherit; position: relative;">
+    <iframe id="iframe" src="{{ url_for('static', filename='default.html') }}" width="100%;" class="embed-responsive-item" allowfullscreen></iframe>
+</div>
+{% endif %}
+
+{% endblock %}
